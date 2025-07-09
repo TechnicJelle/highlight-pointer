@@ -97,7 +97,7 @@ static struct {
     int highlight_visible;
     int outline;
     int radius;
-    double opacity;  // Add opacity field
+    double opacity;
 } options;
 
 static void redraw();
@@ -181,14 +181,14 @@ static int init_window() {
     win_attributes.event_mask = ExposureMask | VisibilityChangeMask;
     win_attributes.override_redirect = True;
 
-    win = XCreateWindow(dpy, root, options.outline, options.outline, 2 * total_radius + 2, 2 * total_radius + 2, 0, DefaultDepth(dpy, screen), InputOutput, DefaultVisual(dpy, screen),
-                        CWEventMask | CWOverrideRedirect, &win_attributes);
+    win = XCreateWindow(dpy, root, options.outline, options.outline, 2 * total_radius + 2, 2 * total_radius + 2, 0, DefaultDepth(dpy, screen), InputOutput,
+                        DefaultVisual(dpy, screen), CWEventMask | CWOverrideRedirect, &win_attributes);
     if (!win) {
         fprintf(stderr, "Can't create highlight window\n");
         return 1;
     }
 
-    // Set window opacity
+    /* Set window opacity */
     unsigned long opacity_value = (unsigned long)(options.opacity * 0xFFFFFFFF);
     Atom opacity_atom = XInternAtom(dpy, "_NET_WM_WINDOW_OPACITY", False);
     XChangeProperty(dpy, win, opacity_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char*)&opacity_value, 1);
@@ -292,10 +292,16 @@ static void handle_key(KeySym keysym, unsigned int modifiers) {
             break;
 
         case KEY_TOGGLE_AUTOHIDE_CURSOR:
+            if (options.auto_hide_cursor && !cursor_visible) {
+                show_cursor();
+            }
             options.auto_hide_cursor = 1 - options.auto_hide_cursor;
             break;
 
         case KEY_TOGGLE_AUTOHIDE_HIGHLIGHT:
+            if (options.auto_hide_highlight) {
+                show_highlight();
+            }
             options.auto_hide_highlight = 1 - options.auto_hide_highlight;
             break;
     }
@@ -495,8 +501,8 @@ static void print_usage(const char* name) {
         "  -h, --help      show this help message\n"
         "\n"
         "DISPLAY OPTIONS\n"
-        "  -c, --released-color COLOR  dot color when mouse button released [default: #d62728]\n"
-        "  -p, --pressed-color COLOR   dot color when mouse button pressed [default: #1f77b4]\n"
+        "  -c, --released-color COLOR  dot color when mouse button released [default: '#d62728']\n"
+        "  -p, --pressed-color COLOR   dot color when mouse button pressed [default: '#1f77b4']\n"
         "  -o, --outline OUTLINE       line width of outline or 0 for filled dot [default: 0]\n"
         "  -r, --radius RADIUS         dot radius in pixels [default: 5]\n"
         "      --opacity OPACITY       window opacity (0.0 - 1.0) [default: 1.0]\n"
@@ -631,7 +637,7 @@ static int xerror_handler(Display* dpy_p, XErrorEvent* err) {
     }
     char buf[1024];
     XGetErrorText(dpy_p, err->error_code, buf, 1024);
-    fprintf(stderr, "X error: %s\n", buf);
+    fprintf(stderr, "X error: %s (in %d-%d)\n", buf, err->request_code, err->minor_code);
     exit(1);
 }
 
